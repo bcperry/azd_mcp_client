@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: azd-mcp-client
+metadata:
+  template: azd-mcp-client@0.0.1-beta
+
+# Infrastructure configuration
+infra:
+  provider: bicep
+  path: infra
+
+services:
+  web:
+    project: .
+    language: py
+    host: appservice
+
+hooks:
+  prepackage:
+    posix:
+      shell: sh
+      run: |
+        echo "Installing dependencies..."
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    windows:
+      shell: pwsh
+      run: |
+        echo "Installing dependencies..."
+        python -m pip install --upgrade pip
+        if (Test-Path requirements.txt) { pip install -r requirements.txt }
+  postdeploy:
+    posix:
+      shell: sh
+      run: |
+        echo "Post-deployment configuration complete"
+    windows:
+      shell: pwsh
+      run: |
+        echo "Post-deployment configuration complete"

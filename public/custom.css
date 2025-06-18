@@ -1,0 +1,43 @@
+/* Custom logo styling for Chainlit app */
+
+/* Add logo to the app header */
+.cl-header .cl-app-name::before {
+    content: '';
+    background-image: url('/public/logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Alternative: Replace the entire header with logo */
+.cl-header .cl-app-name {
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* Style for mobile responsiveness */
+@media (max-width: 768px) {
+    .cl-header .cl-app-name::before {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* Optional: Add logo to welcome page */
+.cl-markdown h1:first-child::before {
+    content: '';
+    background-image: url('/public/logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    width: 48px;
+    height: 48px;
+    display: inline-block;
+    margin-right: 12px;
+    vertical-align: middle;
+}
