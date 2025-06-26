@@ -15,6 +15,14 @@ param location string
 @description('Name of the resource group')
 param resourceGroupName string
 
+
+@description('Name of the openai model to deploy')
+@allowed(['gpt-35-turbo', 'gpt-4', 'gpt-4o', 'gpt-4o-mini', 'o3-mini'])
+param openAIModelName string
+
+@description('API version for OpenAI service')
+param openAIAPIVersion string = '2024-10-01-preview'
+
 // Variables
 var resourceToken = toLower(uniqueString(subscription().id, environmentName))
 var resourcePrefix = 'azd-mcp-client'
@@ -40,6 +48,8 @@ module resources 'resources.bicep' = {
     resourceToken: resourceToken
     resourcePrefix: resourcePrefix
     tags: tags
+    openAIModelName: openAIModelName
+    openAIAPIVersion: openAIAPIVersion
   }
 }
 
@@ -53,6 +63,7 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.APPLICAT
 output AZURE_OPENAI_ENDPOINT string = resources.outputs.AZURE_OPENAI_ENDPOINT
 output AZURE_OPENAI_MODEL string = resources.outputs.AZURE_OPENAI_MODEL
 output OPENAI_API_VERSION string = resources.outputs.OPENAI_API_VERSION
+output AZURE_OPENAI_API_KEY string = resources.outputs.AZURE_OPENAI_API_KEY
 // Note: AZURE_OPENAI_API_KEY is securely stored in Key Vault and accessed via App Service configuration
 
 output SERVICE_WEB_NAME string = resources.outputs.SERVICE_WEB_NAME

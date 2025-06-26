@@ -219,8 +219,6 @@ class ChatClient:
                 model=self.deployment_name,
                 messages=self.messages,
                 tools=tools,
-                parallel_tool_calls=False,
-                tool_choice="required",
                 stream=True,
                 temperature=temperature
             )

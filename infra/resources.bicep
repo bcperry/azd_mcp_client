@@ -15,6 +15,12 @@ param resourcePrefix string
 @description('Tags for all resources')
 param tags object
 
+@description('Name of the OpenAI model to deploy')
+param openAIModelName string
+
+@description('API version for OpenAI service')
+param openAIAPIVersion string
+
 // Log Analytics Workspace
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: '${resourcePrefix}-logs-${resourceToken}'
@@ -71,15 +77,14 @@ resource cognitiveServices 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-// GPT-4o Model Deployment
-resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+// OpenAI Model Deployment
+resource openAIModelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: cognitiveServices
-  name: 'gpt-4o'
+  name: openAIModelName
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-05-13' // Latest stable version of GPT-4o
+      name: openAIModelName
     }
     versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
     currentCapacity: 10 // Standard deployment capacity - adjust based on your needs
@@ -172,11 +177,11 @@ resource appService 'Microsoft.Web/sites@2024-04-01' = {
         }
         {
           name: 'AZURE_OPENAI_MODEL'
-          value: 'gpt-4o'
+          value: openAIModelName
         }
         {
           name: 'OPENAI_API_VERSION'
-          value: '2024-08-01-preview'
+          value: openAIAPIVersion
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -262,8 +267,9 @@ resource keyVaultAccessPolicyForAppService 'Microsoft.KeyVault/vaults/accessPoli
 // Outputs
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.properties.ConnectionString
 output AZURE_OPENAI_ENDPOINT string = cognitiveServices.properties.endpoint
-output AZURE_OPENAI_MODEL string = gpt4oDeployment.name
-output OPENAI_API_VERSION string = '2024-08-01-preview'
+output AZURE_OPENAI_MODEL string = openAIModelDeployment.name
+output OPENAI_API_VERSION string = openAIAPIVersion
+output AZURE_OPENAI_API_KEY string = cognitiveServices.listKeys().key1
 // Note: AZURE_OPENAI_API_KEY is securely stored in Key Vault and accessed via App Service configuration
 
 output SERVICE_WEB_NAME string = appService.name
