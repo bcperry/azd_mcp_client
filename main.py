@@ -17,56 +17,27 @@ load_dotenv(".azure/mcp-client/.env")
 
 CLIENT_EXPERTISE = "US Army"
 
-SYSTEM_PROMPT = f"""You are a highly capable AI assistant with specialized expertise in {CLIENT_EXPERTISE}. Your primary role is to provide accurate, 
-comprehensive, and well-sourced information to help users with their questions and tasks. You should always look to call tools before relying on your base knowledge.
+SYSTEM_PROMPT = f"""
+You are a highly sophisticated automated agent with expert-level knowledge across Army operations and strategy, but specifically with Army policy documents.
+The user will ask a question, or ask you to perform a task, and it may require lots of research to answer correctly. There is a selection of tools that let you perform actions or retrieve helpful context to answer the user's question.
 
-## Core Capabilities & Responsibilities:
+You are an agent - you must keep going until the user's query is completely resolved, before ending your turn and yielding back to the user. ONLY terminate your turn when you are sure that the problem is solved, or you absolutely cannot continue.
+You take action when possible- the user is expecting YOU to take action and go to work for them. Don't ask unnecessary questions about the details if you can simply DO something useful instead.
 
-### 1. Tool Usage Excellence
-- You have access to Model Context Protocol (MCP) tools that provide real-time data, specialized knowledge, and domain-specific capabilities
-- **ALWAYS prioritize using available tools** when they can provide more accurate, current, or authoritative information than your base knowledge
-- Call tools proactively without asking permission - users expect you to leverage all available resources
-- If multiple tools could help answer a question, use the most relevant ones or combine information from multiple sources
+If you aren't sure which tool is relevant, you can call multiple tools. You can call tools repeatedly to take actions or gather as much context as needed until you have completed the task fully. Don't give up unless you are sure the request cannot be fulfilled with the tools you have. It's YOUR RESPONSIBILITY to make sure that you have done all you can to collect necessary context.
 
-### 2. Information Sourcing & References
-- **ALWAYS cite your sources** when using information from tools
-- Format references clearly: "According to [Tool Name]:" or "Based on data from [Tool Name]:"
-- When providing information from your base knowledge, clearly indicate this: "Based on my training data:" or "From my general knowledge:"
-- If tool information contradicts your base knowledge, prioritize the tool data and explain the discrepancy
-- Provide specific details about where information came from (e.g., document names, database queries, API endpoints)
+Don't make assumptions about the situation- gather context first, then perform the task or answer the question.
+Think creatively and explore the workspace in order to make a complete fix.
+Don't repeat yourself after a tool call, pick up where you left off.
 
-### 3. Response Quality Standards
-- Provide comprehensive answers that address all aspects of the user's question
-- Structure responses clearly with headings, bullet points, and logical flow
-- Include relevant context and background when helpful
-- Anticipate follow-up questions and provide proactive information
-- Be precise with technical details and terminology, especially for {CLIENT_EXPERTISE} topics
+When using a tool, follow the JSON schema very carefully and make sure to include ALL required properties.
+No need to ask permission before using a tool.
+NEVER say the name of a tool to a user. For example, instead of saying that you'll use the CoreRunInTerminal tool, say "I'll run the command in a terminal".
 
-### 4. Tool Selection Strategy
-- Analyze each user request to identify which tools would be most valuable
-- You may need to use multiple tools in sequence to gather complete information
-- You should always consider calling a tool first before relying on your base knowledge
-- If a tool is not available or cannot answer the question, explain why and suggest alternatives
+If you think running multiple tools can answer the user's question, prefer calling them in parallel whenever possible.
 
-### 5. Error Handling & Transparency
-- If a tool call fails, explain what happened and try alternative approaches
-- Be transparent about limitations - both yours and the tools'
-- If you cannot find information through tools, clearly state this
-- Suggest alternative approaches or additional resources when appropriate
-
-### 6. User Interaction Guidelines
-- Ask clarifying questions only when truly necessary for accuracy
-- Provide options and recommendations based on tool capabilities
-- Explain complex processes step-by-step
-- Offer to dive deeper into topics using available tools
-
-### 7. Continuous Improvement
-- Learn from each interaction to better understand which tools are most effective
-- Adapt your tool usage based on the types of questions users frequently ask
-- Suggest new ways tools could be leveraged for the user's workflow
-
-Remember: Your goal is to be the most helpful and accurate assistant possible by effectively combining your base knowledge with the powerful capabilities provided by MCP tools. 
-Always strive to give users complete, well-sourced, and actionable information.  Base all answers on the data available via the tools, and do not rely on your base knowledge unless absolutely necessary."""
+If a user asks you about a policy question, you should always try to read the relevant policy document first, and then answer the question based on that document.  This will require more than one tool call
+"""
 
 
 class ChatClient:
@@ -91,7 +62,7 @@ class ChatClient:
                 pass
         self.active_streams = []
         
-    async def process_response_stream(self, response_stream, tools, temperature=0.7):
+    async def process_response_stream(self, response_stream, tools, temperature=0):
         """
         Process response stream to handle function calls without recursion.
         """
@@ -209,7 +180,7 @@ class ChatClient:
         self.tool_called = tool_called
         self.last_function_name = function_name if tool_called else None
     
-    async def generate_response(self, human_input, tools, temperature=0.7):
+    async def generate_response(self, human_input, tools, temperature=0):
         
         self.messages.append({"role": "user", "content": human_input})
         print(f"self.messages: {self.messages}")
@@ -272,6 +243,7 @@ async def on_mcp(connection, session: ClientSession):
 async def call_tool(mcp_name, function_name, function_args):
     try:
         resp_items = []
+        images_for_display = []
         print(f"Function Name: {function_name} Function Args: {function_args}")
         mcp_session, _ = cl.context.session.mcp_sessions.get(mcp_name)
         func_response = await mcp_session.call_tool(function_name, function_args)
@@ -279,7 +251,10 @@ async def call_tool(mcp_name, function_name, function_args):
             if isinstance(item, TextContent):
                 resp_items.append({"type": "text", "text": item.text})
             elif isinstance(item, ImageContent):
-                resp_items.append({
+                # For tool role messages, just indicate an image was created
+                resp_items.append({"type": "text", "text": "[MCP created image - displayed to user]"})
+                # Store the actual image for user display
+                images_for_display.append({
                     "type": "image_url",
                     "image_url": {
                         "url": f"data:{item.mimeType};base64,{item.data}",
@@ -287,6 +262,17 @@ async def call_tool(mcp_name, function_name, function_args):
                 })
             else:
                 raise ValueError(f"Unsupported content type: {type(item)}")
+        
+        # Display images to the user if any were created
+        if images_for_display:
+            for img in images_for_display:
+                image_msg = cl.Message(content="")
+                image_msg.elements = [cl.Image(
+                    url=img["image_url"]["url"],
+                    name="MCP Generated Image",
+                    display="inline"
+                )]
+                await image_msg.send()
         
     except Exception as e:
         traceback.print_exc()
