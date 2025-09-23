@@ -152,7 +152,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
 
 // App Service
 resource appService 'Microsoft.Web/sites@2024-04-01' = {
-  name: '${resourcePrefix}-app-${resourceToken}'
+  name: resourcePrefix
   location: location
   tags: union(tags, { 'azd-service-name': 'web' })
   kind: 'app,linux'

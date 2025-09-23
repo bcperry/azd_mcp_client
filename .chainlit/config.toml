@@ -73,7 +73,7 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "Assistant"
+name = "Azure Data Platform"
 
 # default_theme = "dark"
 
