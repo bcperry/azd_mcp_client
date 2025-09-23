@@ -244,12 +244,12 @@ async def chat_profile():
 
         cl.ChatProfile(
             name="GPT-4o-mini",
-            markdown_description="The underlying LLM model is **Azure OpenAI GPT-4o-mini**.",
+            markdown_description="Get responses from **Azure OpenAI GPT-4o-mini**.",
             icon="public/AOAI.png",
         ),
         cl.ChatProfile(
             name="GPT-4o",
-            markdown_description="The underlying LLM model is **Azure OpenAI GPT-4o**.",
+            markdown_description="Get responses from **Azure OpenAI GPT-4o**.",
             icon="public/AOAI.png",
         ),
     ]
