@@ -179,9 +179,23 @@ class ChatClient:
         self.tool_called = tool_called
         self.last_function_name = function_name if tool_called else None
     
+    def _manage_message_history(self, num_messages=20):
+        """Keep only system prompt + last N messages"""
+        if len(self.messages) <= num_messages + 1:  # system + N messages
+            return
+
+        # Keep system message (first) + last N messages
+        # system_msg = {"role": "system", "content": self.system_prompt}
+        self.messages = self.messages[-num_messages:]
+        print(f"Messages: {self.messages}")
+
     async def generate_response(self, human_input, tools, temperature=0):
         
         self.messages.append({"role": "user", "content": human_input})
+        
+        # Manage message history before sending to API
+        self._manage_message_history()
+        
         print(f"self.messages: {self.messages}")
         # Handle multiple sequential function calls in a loop rather than recursively
         while True:
@@ -297,7 +311,9 @@ async def call_tool(mcp_name, function_name, function_args):
 @cl.on_chat_start
 async def start_chat():
     client = ChatClient()
-    cl.user_session.set("messages", [])
+    # Initialize with system message
+    initial_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    cl.user_session.set("messages", initial_messages)
     cl.user_session.set("system_prompt", SYSTEM_PROMPT)
     
 @cl.on_message
@@ -310,6 +326,10 @@ async def on_message(message: cl.Message):
     client = ChatClient()
     # Restore conversation history
     client.messages = cl.user_session.get("messages", [])
+    
+    # Ensure system message is present if messages list is not empty
+    if client.messages and not any(msg.get("role") == "system" for msg in client.messages):
+        client.messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
     
     msg = cl.Message(content="")
     print(f"Tools: {tools}")
