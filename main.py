@@ -267,9 +267,23 @@ async def on_mcp(connection, session: ClientSession):
     mcp_tools[connection.name] = tools
     cl.user_session.set("mcp_tools", mcp_tools)
 
+@cl.password_auth_callback
+def auth_callback(username: str, password: str):
+    # Fetch the user matching username from your database
+    # and compare the hashed password with the value stored in the database
+    if (username, password) == ("ausa", "admin"):
+        return cl.User(
+            identifier="ausa_demo", metadata={"role": "admin", "provider": "credentials"}
+        )
+    else:
+        return None
 
 @cl.step(type="tool") 
 async def call_tool(mcp_name, function_name, function_args):
+    current_step = cl.context.current_step
+    current_step.name = function_name
+    current_step.input = function_args
+
     try:
         resp_items = []
         images_for_display = []

@@ -134,6 +134,15 @@ resource openAIKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// Store Chainlit auth secret in Key Vault
+resource chainlitAuthSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'CHAINLIT-AUTH-SECRET'
+  properties: {
+    value: uniqueString(subscription().subscriptionId, resourceGroup().id, resourceToken, 'chainlit-auth')
+  }
+}
+
 // App Service Plan
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: '${resourcePrefix}-plan-${resourceToken}'
@@ -203,6 +212,10 @@ resource appService 'Microsoft.Web/sites@2024-04-01' = {
           name: 'WEBSITES_PORT'
           value: '8000'
         }
+        {
+          name: 'CHAINLIT_AUTH_SECRET'
+          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=CHAINLIT-AUTH-SECRET)'
+        }
       ]
       cors: {
         allowedOrigins: ['*']
@@ -269,7 +282,6 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = applicationInsights.proper
 output AZURE_OPENAI_ENDPOINT string = cognitiveServices.properties.endpoint
 output AZURE_OPENAI_MODEL string = openAIModelDeployment.name
 output OPENAI_API_VERSION string = openAIAPIVersion
-output AZURE_OPENAI_API_KEY string = cognitiveServices.listKeys().key1
 // Note: AZURE_OPENAI_API_KEY is securely stored in Key Vault and accessed via App Service configuration
 
 output SERVICE_WEB_NAME string = appService.name

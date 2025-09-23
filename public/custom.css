@@ -3,7 +3,7 @@
 /* Add logo to the app header */
 .cl-header .cl-app-name::before {
     content: '';
-    background-image: url('/public/logo_dark.png');
+    background-image: url('/public/AOAI.png');
     background-size: contain;
     background-repeat: no-repeat;
     width: 32px;
@@ -29,15 +29,4 @@
     }
 }
 
-/* Optional: Add logo to welcome page */
-.cl-markdown h1:first-child::before {
-    content: '';
-    background-image: url('/public/logo_dark.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    width: 48px;
-    height: 48px;
-    display: inline-block;
-    margin-right: 12px;
-    vertical-align: middle;
-}
+
