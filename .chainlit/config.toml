@@ -54,7 +54,14 @@ edit_message = true
     # Sample rate of the audio
     sample_rate = 24000
 
+[features.mcp]
+    enabled = true
+
 [features.mcp.sse]
+    enabled = true
+
+[features.mcp.streamable-http]
+    # Enable or disable the Streamable HTTP connection type globally
     enabled = true
 
 [features.mcp.stdio]
