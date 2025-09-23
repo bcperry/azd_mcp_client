@@ -87,12 +87,12 @@ resource openAIModelDeployment 'Microsoft.CognitiveServices/accounts/deployments
       name: openAIModelName
     }
     versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
-    currentCapacity: 10 // Standard deployment capacity - adjust based on your needs
+    currentCapacity: 450 // Standard deployment capacity - adjust based on your needs
 
   }
   sku: {
     name: 'Standard'
-    capacity: 10
+    capacity: 450
   }
 }
 
