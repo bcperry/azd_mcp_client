@@ -42,7 +42,6 @@ If a user asks you about a policy question, you should always try to read the re
 
 class ChatClient:
     def __init__(self) -> None:
-        self.deployment_name = os.environ["AZURE_OPENAI_MODEL"]
         self.client = AsyncAzureOpenAI(
                 azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
                 api_key=os.environ["AZURE_OPENAI_API_KEY"],
@@ -187,7 +186,7 @@ class ChatClient:
         # Handle multiple sequential function calls in a loop rather than recursively
         while True:
             response_stream = await self.client.chat.completions.create(
-                model=self.deployment_name,
+                model=cl.user_session.get("chat_profile"),
                 messages=self.messages,
                 tools=tools,
                 parallel_tool_calls=False,
@@ -224,6 +223,22 @@ class ChatClient:
 
 def flatten(xss):
     return [x for xs in xss for x in xs]
+
+@cl.set_chat_profiles
+async def chat_profile():
+    return [
+
+        cl.ChatProfile(
+            name="GPT-4o-mini",
+            markdown_description="The underlying LLM model is **Azure OpenAI GPT-4o-mini**.",
+            icon="public/AOAI.png",
+        ),
+        cl.ChatProfile(
+            name="GPT-4o",
+            markdown_description="The underlying LLM model is **Azure OpenAI GPT-4o**.",
+            icon="public/AOAI.png",
+        ),
+    ]
 
 @cl.on_mcp_connect
 async def on_mcp(connection, session: ClientSession):
