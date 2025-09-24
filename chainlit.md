@@ -64,3 +64,4 @@ This platform directly supports:
 - **Enterprise Cloud Strategy**
 
 *For technical demonstrations and detailed briefings, contact the Microsoft Army Team.*
+*App version: 0.4.0*
