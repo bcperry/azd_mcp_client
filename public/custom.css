@@ -6,8 +6,8 @@
     background-image: url('/public/AOAI.png');
     background-size: contain;
     background-repeat: no-repeat;
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
     display: inline-block;
     margin-right: 8px;
     vertical-align: middle;
@@ -24,9 +24,18 @@
 /* Style for mobile responsiveness */
 @media (max-width: 768px) {
     .cl-header .cl-app-name::before {
-        width: 24px;
-        height: 24px;
+        width: 36px;
+        height: 36px;
     }
+}
+
+/* Chat Profile Icon Styling - Make the profile icon larger */
+/* Target the specific image in the chat profile selector */
+
+/* Welcome screen army logo (the large one in center) */
+#welcome-screen img[src*="MS Army Logo.png"] {
+    width: 256px !important;
+    height: 256px !important;
 }
 
 
