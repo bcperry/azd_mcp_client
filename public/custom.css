@@ -36,6 +36,9 @@
 #welcome-screen img[src*="MS Army Logo.png"] {
     width: 256px !important;
     height: 256px !important;
+    border-radius: 0 !important;
+    padding: 20px !important;
+    object-fit: contain !important;
 }
 
 
