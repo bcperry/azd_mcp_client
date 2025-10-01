@@ -89,6 +89,11 @@ class ChatClient:
         self.messages = []
         self.system_prompt = SYSTEM_PROMPT
         self.active_streams = []  # Track active response streams
+        self.tool_called = False
+        self.pending_tool_call = None
+        self.last_tool_called = None
+        self.last_function_name = None
+        self.last_error = None
         print(f"System Prompt: {self.system_prompt}")
         
     async def _cleanup_streams(self):
@@ -109,7 +114,6 @@ class ChatClient:
         tool_call_id = ""
         is_collecting_function_args = False
         collected_messages = []
-        tool_called = False
         
         # Add to active streams for cleanup if needed
         self.active_streams.append(response_stream)
@@ -173,19 +177,18 @@ class ChatClient:
                         self.active_streams.remove(response_stream)
                         await response_stream.close()
                     
-                    # Call the tool and add response to messages
-                    func_response = await call_tool(mcp_name, function_name, function_args)
-                    print(f"Function Response: {json.loads(func_response)}")
-                    self.messages.append({
+                    # Store pending tool call details for later execution
+                    self.pending_tool_call = {
+                        "mcp_name": mcp_name,
+                        "function_name": function_name,
+                        "function_args": function_args,
+                        "function_arguments": function_arguments,
                         "tool_call_id": tool_call_id,
-                        "role": "tool",
-                        "name": function_name,
-                        "content": json.loads(func_response),
-                    })
+                    }
                     
                     # Set flag that tool was called and store the function name
                     self.last_tool_called = function_name
-                    tool_called = True
+                    self.tool_called = True
                     break  # Exit the loop instead of returning
                 
                 # Check if we've reached the end of assistant's response
@@ -215,8 +218,12 @@ class ChatClient:
             self.last_error = str(e)
         
         # Store result in instance variables
-        self.tool_called = tool_called
-        self.last_function_name = function_name if tool_called else None
+        if getattr(self, "tool_called", False):
+            self.last_function_name = function_name
+        else:
+            self.tool_called = False
+            self.last_tool_called = None
+            self.last_function_name = None
     
     def _manage_message_history(self, num_messages=20):
         """Keep only system prompt + last N messages"""
@@ -255,6 +262,12 @@ class ChatClient:
                 # Check instance variables after streaming is complete
                 if not self.tool_called:
                     break
+                # Yield pending tool call information to consumer
+                if self.pending_tool_call:
+                    yield {"type": "tool_call", "payload": self.pending_tool_call}
+                # Reset flags before continuing to next assistant turn
+                self.tool_called = False
+                self.pending_tool_call = None
                 # Otherwise, loop continues for the next response that follows the tool call
             except GeneratorExit:
                 # Ensure we clean up when the client disconnects
@@ -267,6 +280,7 @@ class ChatClient:
         self.tool_called = False
         self.last_function_name = None
         self.last_error = None
+        self.pending_tool_call = None
         
         async for token in self.process_response_stream(response_stream, tools, temperature):
             yield token
@@ -384,11 +398,49 @@ async def on_message(message: cl.Message):
     if client.messages and not any(msg.get("role") == "system" for msg in client.messages):
         client.messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
     
-    msg = cl.Message(content="")
+    msg = None
+    has_content = False
     print(f"Tools: {tools}")
-    async for text in client.generate_response(human_input=message.content, tools=tools):
-        await msg.stream_token(text)
+    async for event in client.generate_response(human_input=message.content, tools=tools):
+        if isinstance(event, str):
+            if not event:
+                continue
+            if not msg:
+                msg = cl.Message(content="")
+            await msg.stream_token(event)
+            has_content = True
+        elif isinstance(event, dict) and event.get("type") == "tool_call":
+            tool_info = event["payload"]
+
+            if msg and has_content:
+                await msg.send()
+            # Reset current message state
+            msg = None
+            has_content = False
+
+            func_response = await call_tool(
+                tool_info.get("mcp_name"),
+                tool_info.get("function_name"),
+                tool_info.get("function_args", {}),
+            )
+
+            try:
+                parsed_content = json.loads(func_response) if func_response else []
+            except (json.JSONDecodeError, TypeError):
+                parsed_content = [{"type": "text", "text": str(func_response)}]
+
+            print(f"Function Response: {parsed_content}")
+
+            client.messages.append({
+                "tool_call_id": tool_info.get("tool_call_id"),
+                "role": "tool",
+                "name": tool_info.get("function_name"),
+                "content": parsed_content,
+            })
     
     # Update the stored messages after processing
+    if msg and has_content:
+        await msg.send()
+
     cl.user_session.set("messages", client.messages)
 
